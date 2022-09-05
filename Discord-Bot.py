@@ -50,4 +50,4 @@ async def on_member_join(member):
     message = f'Welcome to the server {member.mention}!'
     await user.send(message)
 
-#client.run(os.getenv('DiscordToken'))
+client.run(os.getenv('DiscordToken'))
