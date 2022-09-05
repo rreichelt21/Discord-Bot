@@ -44,7 +44,7 @@ async def on_message(message):
             await message.channel.send('You do not have permission to clear the channel.')
 
 @client.event
-async def on_member_join(member):
+async def on_member_join(user, member):
     
     #sends a private DM to user when they join the server
     message = f'Welcome to the server {member.mention}!'
