@@ -1,12 +1,14 @@
 import discord
 import os
-
+from discord.ext import commands
+from discord.ext import tasks
 from dotenv import load_dotenv
+
 load_dotenv()
 
 client = discord.Client(intents=discord.Intents.all())
 
-#Prints to console when bot is ready
+#Prints to terminal when bot is ready
 @client.event
 async def on_ready():
     print(f'We have logged in as {client.user}')
