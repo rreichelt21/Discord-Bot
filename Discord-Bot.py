@@ -7,8 +7,6 @@ import music
 
 bot = commands.Bot(command_prefix = '/', intents=discord.Intents.all())
 
-bot.add_cog(music_cog(client))
-
 #Gets bot token from .env file
 load_dotenv()
 
@@ -16,12 +14,12 @@ load_dotenv()
 @bot.event
 async def on_ready():
     
-    print(f'We have logged in as {client.user}')
+    print(f'We have logged in as {bot.user}')
 
-@client.event
+@bot.event
 async def on_member_join(member:discord.Member):
     
-    guild = client.get_guild(974527457883471903) #Replace with your server ID
+    guild = bot.get_guild(974527457883471903) #Replace with your server ID
 
     #sends a private DM to user when they join the server
     await member.send(f'Welcome to the {guild.name} server, {member.mention}!')
@@ -30,7 +28,7 @@ async def on_member_join(member:discord.Member):
 @bot.event
 async def on_message(message):
     
-    if message.author == client.user:
+    if message.author == bot.user:
         return
 
     #!help command
