@@ -1,68 +1,56 @@
 import discord
-from discord.ext import commands
-import youtube_dl
 import os
+import asyncio
+import youtube_dl
+import time
 
-client = commands.Bot(command_prefix="/")
+voice_clients = {}
 
-@client.command()
-async def play(ctx, url : str):
-    song_there = os.path.isfile("song.mp3")
-    try:
-        if song_there:
-            os.remove("song.mp3")
-    except PermissionError:
-        await ctx.send("Wait for the current playing music to end or use the 'stop' command")
-        return
+yt_dl_opts = {'format': 'bestaudio/best'}
+ytdl = youtube_dl.YoutubeDL(yt_dl_opts)
 
-    voiceChannel = discord.utils.get(ctx.guild.voice_channels, name='General')
-    await voiceChannel.connect()
-    voice = discord.utils.get(client.voice_clients, guild=ctx.guild)
+ffmpeg_options = {'options': "-vn"}
 
-    ydl_opts = {
-        'format': 'bestaudio/best',
-        'postprocessors': [{
-            'key': 'FFmpegExtractAudio',
-            'preferredcodec': 'mp3',
-            'preferredquality': '192',
-        }],
-    }
-    with youtube_dl.YoutubeDL(ydl_opts) as ydl:
-        ydl.download([url])
-    for file in os.listdir("./"):
-        if file.endswith(".mp3"):
-            os.rename(file, "song.mp3")
-    voice.play(discord.FFmpegPCMAudio("song.mp3"))
+if msg.content.startswith("?play"):
 
+        try:
+            voice_client = await msg.author.voice.channel.connect()
+            voice_clients[voice_client.guild.id] = voice_client
+        except:
+            print("error")
 
-@client.command()
-async def leave(ctx):
-    voice = discord.utils.get(client.voice_clients, guild=ctx.guild)
-    if voice.is_connected():
-        await voice.disconnect()
-    else:
-        await ctx.send("The bot is not connected to a voice channel.")
+        try:
+            url = msg.content.split()[1]
+
+            loop = asyncio.get_event_loop()
+            data = await loop.run_in_executor(None, lambda: ytdl.extract_info(url, download=False))
+
+            song = data['url']
+            player = discord.FFmpegPCMAudio(song, **ffmpeg_options)
+
+            voice_clients[msg.guild.id].play(player)
+
+        except Exception as err:
+            print(err)
 
 
-@client.command()
-async def pause(ctx):
-    voice = discord.utils.get(client.voice_clients, guild=ctx.guild)
-    if voice.is_playing():
-        voice.pause()
-    else:
-        await ctx.send("Currently no audio is playing.")
+    if msg.content.startswith("?pause"):
+        try:
+            voice_clients[msg.guild.id].pause()
+        except Exception as err:
+            print(err)
 
+    # This resumes the current song playing if it's been paused
+    if msg.content.startswith("?resume"):
+        try:
+            voice_clients[msg.guild.id].resume()
+        except Exception as err:
+            print(err)
 
-@client.command()
-async def resume(ctx):
-    voice = discord.utils.get(client.voice_clients, guild=ctx.guild)
-    if voice.is_paused():
-        voice.resume()
-    else:
-        await ctx.send("The audio is not paused.")
-
-
-@client.command()
-async def stop(ctx):
-    voice = discord.utils.get(client.voice_clients, guild=ctx.guild)
-    voice.stop()
+    # This stops the current playing song
+    if msg.content.startswith("?stop"):
+        try:
+            voice_clients[msg.guild.id].stop()
+            await voice_clients[msg.guild.id].disconnect()
+        except Exception as err:
+            print(err)
