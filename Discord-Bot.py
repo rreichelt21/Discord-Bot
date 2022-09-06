@@ -33,7 +33,7 @@ async def on_message(message):
 
     #!help command
     if message.content.startswith('/help'):
-        await message.channel.send('List of commands: !help, !hello, !kanye')
+        await message.channel.send('List of commands: /help, /hello, /kanye')
 
     #!hello command
     if message.content.startswith('/hello'):
@@ -45,7 +45,7 @@ async def on_message(message):
         await message.channel.send('https://tenor.com/view/kanye-west-stare-staring-funny-gif-13590085')
 
     #!clear command (with manage messages permission enabled, max 100 messages)
-    if message.content.startswith('!clear') and message.author.guild_permissions.manage_messages is True:
+    if message.content.startswith('/clear') and message.author.guild_permissions.manage_messages is True:
             await message.channel.purge(limit=100)
 
 #Uses bot token from .env file in order to run bot
