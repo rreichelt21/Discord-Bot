@@ -1,3 +1,4 @@
+from tkinter import BOTTOM
 import discord
 import os
 from discord.ext import commands
@@ -5,13 +6,15 @@ from discord.ext import tasks
 from dotenv import load_dotenv
 import music
 
-client = commands.Bot(command_prefix = '/', intents=discord.Intents.all())
+bot = commands.Bot(command_prefix = '/', intents=discord.Intents.all())
+
+bot.add_cog(music_cog(client))
 
 #Gets bot token from .env file
 load_dotenv()
 
 #Prints to terminal when bot is ready
-@client.event
+@bot.event
 async def on_ready():
     
     print(f'We have logged in as {client.user}')
@@ -25,7 +28,7 @@ async def on_member_join(member:discord.Member):
     await member.send(f'Welcome to the {guild.name} server, {member.mention}!')
 
 #Sends message in Discord channel when user sends a ! command in chat
-@client.event
+@bot.event
 async def on_message(message):
     
     if message.author == client.user:
@@ -49,4 +52,4 @@ async def on_message(message):
             await message.channel.purge(limit=100)
 
 #Uses bot token from .env file in order to run bot
-client.run(os.getenv('DiscordToken'))
+bot.run(os.getenv('DiscordToken'))
