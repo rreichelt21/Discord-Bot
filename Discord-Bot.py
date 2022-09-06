@@ -3,15 +3,17 @@ import os
 from discord.ext import commands
 from discord.ext import tasks
 from dotenv import load_dotenv
+import music
+
+client = commands.Bot(command_prefix = '/', intents=discord.Intents.all())
 
 #Gets bot token from .env file
 load_dotenv()
 
-client = discord.Client(intents=discord.Intents.all())
-
 #Prints to terminal when bot is ready
 @client.event
 async def on_ready():
+    
     print(f'We have logged in as {client.user}')
 
 @client.event
@@ -25,6 +27,7 @@ async def on_member_join(member:discord.Member):
 #Sends message in Discord channel when user sends a ! command in chat
 @client.event
 async def on_message(message):
+    
     if message.author == client.user:
         return
 
