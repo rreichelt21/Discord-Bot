@@ -32,15 +32,15 @@ async def on_message(message):
         return
 
     #!help command
-    if message.content.startswith('!help'):
+    if message.content.startswith('/help'):
         await message.channel.send('List of commands: !help, !hello, !kanye')
 
     #!hello command
-    if message.content.startswith('!hello'):
+    if message.content.startswith('/hello'):
         await message.channel.send('Hello!')
 
     #!kanye command
-    if message.content.startswith('!kanye'):
+    if message.content.startswith('/kanye'):
         await message.channel.send('https://open.spotify.com/playlist/37i9dQZF1DZ06evO3nMr04?si=8b5b982b9c744141')
         await message.channel.send('https://tenor.com/view/kanye-west-stare-staring-funny-gif-13590085')
 
