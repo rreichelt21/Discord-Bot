@@ -13,25 +13,25 @@ ffmpeg_options = {'options': "-vn"}
 
 if msg.content.startswith("?play"):
 
-        try:
-            voice_client = await msg.author.voice.channel.connect()
-            voice_clients[voice_client.guild.id] = voice_client
-        except:
-            print("error")
+    try:
+        voice_client = await msg.author.voice.channel.connect()
+        voice_clients[voice_client.guild.id] = voice_client
+    except:
+        print("error")
 
-        try:
-            url = msg.content.split()[1]
+    try:
+        url = msg.content.split()[1]
 
-            loop = asyncio.get_event_loop()
-            data = await loop.run_in_executor(None, lambda: ytdl.extract_info(url, download=False))
+        loop = asyncio.get_event_loop()
+        data = await loop.run_in_executor(None, lambda: ytdl.extract_info(url, download=False))
 
-            song = data['url']
-            player = discord.FFmpegPCMAudio(song, **ffmpeg_options)
+        song = data['url']
+        player = discord.FFmpegPCMAudio(song, **ffmpeg_options)
 
-            voice_clients[msg.guild.id].play(player)
+        voice_clients[msg.guild.id].play(player)
 
-        except Exception as err:
-            print(err)
+    except Exception as err:
+        print(err)
 
 
     if msg.content.startswith("?pause"):
