@@ -1,5 +1,4 @@
 FROM python:3.10.5-slim-bullseye
-ENV DiscordToken = ODE1MDA0MTMwNTU2NjQxMzIw.GNt3bL.yVEuKP-lVoIDrw4ikykAENVQCpiVCfawfbiv28
 
 WORKDIR /app
 COPY requirements.txt requirements.txt
