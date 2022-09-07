@@ -6,6 +6,6 @@ RUN pip3 install -r requirements.txt
 
 COPY . .
 
-RUN apt-get update && apt-get install -y ffmpeg
+RUN apt-get update && apt-get
 
 CMD ["python3", "Discord-Bot.py"]
