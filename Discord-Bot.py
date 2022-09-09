@@ -1,20 +1,14 @@
-from modulefinder import IMPORT_NAME
+from distutils.spawn import spawn
 import discord
-import os
-from discord.ext import commands, tasks
+from discord.ext import commands
 from dotenv import load_dotenv
+from wavelink.ext import spotify
 import wavelink
+import os
 
-client = commands.Bot(command_prefix = '/', intents=discord.Intents.all())
-
-#Gets bot token from .env file
 load_dotenv()
 
-#Prints to terminal when bot is ready
-@client.event
-async def on_ready():
-    
-    print(f'We have logged in as {client.user}')
+client = commands.Bot(command_prefix="/", intents=discord.Intents.all())
 
 @client.event
 async def on_member_join(member:discord.Member):
@@ -23,36 +17,12 @@ async def on_member_join(member:discord.Member):
 
     #sends a private DM to user when they join the server
     await member.send(f'Welcome to the {guild.name} server, {member.mention}!')
-
-#Sends message in Discord channel when user sends a ! command in chat
-@client.event
-async def on_message(message):
-    
-    if message.author == client.user:
-        return
-
-    #!help command
-    if message.content.startswith('/help'):
-        await message.channel.send('List of commands: /help, /hello, /kanye')
-
-    #!hello command
-    if message.content.startswith('/hello'):
-        await message.channel.send('Hello!')
-
-    #!kanye command
-    if message.content.startswith('/kanye'):
-        await message.channel.send('https://open.spotify.com/playlist/37i9dQZF1DZ06evO3nMr04?si=8b5b982b9c744141')
-        await message.channel.send('https://tenor.com/view/kanye-west-stare-staring-funny-gif-13590085')
-
-    #!clear command (with manage messages permission enabled, max 100 messages)
-    if message.content.startswith('/clear') and message.author.guild_permissions.manage_messages is True:
-            await message.channel.purge(limit=100)
-
 class CustomPlayer(wavelink.Player):
 
     def __init__(self):
         super().__init__()
         self.queue = wavelink.Queue()
+
 
 # HTTPS and websocket operations
 @client.event
@@ -67,7 +37,7 @@ async def connect_nodes():
         bot=client,
         host='127.0.0.1',
         port=2333,
-        password='@deve7hAy02',
+        password='@deve7hAy02'
     )
 
 
@@ -111,7 +81,7 @@ async def disconnect(ctx):
 
 
 @client.command()
-async def play(ctx, *, search: wavelink.YouTubeTrack):
+async def play(ctx, *, search: wavelink.YouTubeMusicTrack):
     vc = ctx.voice_client
     if not vc:
         custom_player = CustomPlayer()
@@ -184,8 +154,6 @@ async def resume(ctx):
 async def play_error(ctx, error):
     if isinstance(error, commands.BadArgument):
         await ctx.send("Could not find a track.")
-    else:
-        await ctx.send("Please join a voice channel.")
+    
 
-#Uses bot token from .env file in order to run bot
-client.run(os.getenv('DiscordToken'))
+client.run(os.getenv("DiscordToken"))
