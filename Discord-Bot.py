@@ -1,34 +1,34 @@
+from modulefinder import IMPORT_NAME
 import discord
 import os
 from discord.ext import commands, tasks
 from dotenv import load_dotenv
-import youtube_dl
-import asyncio
+import wavelink
 
-bot = commands.Bot(command_prefix = '/', intents=discord.Intents.all())
+client = commands.Bot(command_prefix = '/', intents=discord.Intents.all())
 
 #Gets bot token from .env file
 load_dotenv()
 
 #Prints to terminal when bot is ready
-@bot.event
+@client.event
 async def on_ready():
     
-    print(f'We have logged in as {bot.user}')
+    print(f'We have logged in as {client.user}')
 
-@bot.event
+@client.event
 async def on_member_join(member:discord.Member):
     
-    guild = bot.get_guild(974527457883471903) #Replace with your server ID
+    guild = client.get_guild(974527457883471903) #Replace with your server ID
 
     #sends a private DM to user when they join the server
     await member.send(f'Welcome to the {guild.name} server, {member.mention}!')
 
 #Sends message in Discord channel when user sends a ! command in chat
-@bot.event
+@client.event
 async def on_message(message):
     
-    if message.author == bot.user:
+    if message.author == client.user:
         return
 
     #!help command
@@ -48,88 +48,144 @@ async def on_message(message):
     if message.content.startswith('/clear') and message.author.guild_permissions.manage_messages is True:
             await message.channel.purge(limit=100)
 
-youtube_dl.utils.bug_reports_message = lambda: ''
-ytdl_format_options = {
-    'format': 'bestaudio/best',
-    'restrictfilenames': True,
-    'noplaylist': True,
-    'nocheckcertificate': True,
-    'ignoreerrors': False,
-    'logtostderr': False,
-    'quiet': True,
-    'no_warnings': True,
-    'default_search': 'auto',
-    'source_address': '0.0.0.0' # bind to ipv4 since ipv6 addresses cause issues sometimes
-}
-ffmpeg_options = {
-    'options': '-vn'
-}
-ytdl = youtube_dl.YoutubeDL(ytdl_format_options)
-class YTDLSource(discord.PCMVolumeTransformer):
-    def __init__(self, source, *, data, volume=0.5):
-        super().__init__(source, volume)
-        self.data = data
-        self.title = data.get('title')
-        self.url = ""
-    @classmethod
-    async def from_url(cls, url, *, loop=None, stream=False):
-        loop = loop or asyncio.get_event_loop()
-        data = await loop.run_in_executor(None, lambda: ytdl.extract_info(url, download=not stream))
-        if 'entries' in data:
-            # take first item from a playlist
-            data = data['entries'][0]
-        filename = data['title'] if stream else ytdl.prepare_filename(data)
-        return filename
+class CustomPlayer(wavelink.Player):
 
-@bot.command(name='join', help='Tells the bot to join the voice channel')
-async def join(ctx):
-    if not ctx.message.author.voice:
-        await ctx.send("{} is not connected to a voice channel".format(ctx.message.author.name))
-        return
+    def __init__(self):
+        super().__init__()
+        self.queue = wavelink.Queue()
+
+# HTTPS and websocket operations
+@client.event
+async def on_ready():
+    client.loop.create_task(connect_nodes())
+
+
+# helper function
+async def connect_nodes():
+    await client.wait_until_ready()
+    await wavelink.NodePool.create_node(
+        bot=client,
+        host='0.0.0.0',
+        port=2333,
+        password='@deve7hAy02',
+    )
+
+
+# events
+
+@client.event
+async def on_wavelink_node_ready(node: wavelink.Node):
+    print(f'Node: <{node.identifier}> is ready!')
+
+
+@client.event
+async def on_wavelink_track_end(player: CustomPlayer, track: wavelink.Track, reason):
+    if not player.queue.is_empty:
+        next_track = player.queue.get()
+        await player.play(next_track)
+
+
+# commands
+
+@client.command()
+async def connect(ctx):
+    vc = ctx.voice_client # represents a discord voice connection
+    try:
+        channel = ctx.author.voice.channel
+    except AttributeError:
+        return await ctx.send("Please join a voice channel to connect.")
+
+    if not vc:
+        await ctx.author.voice.channel.connect(cls=CustomPlayer())
     else:
-        channel = ctx.message.author.voice.channel
-    await channel.connect()
-@bot.command(name='leave', help='To make the bot leave the voice channel')
-async def leave(ctx):
-    voice_client = ctx.message.guild.voice_client
-    if voice_client.is_connected():
-        await voice_client.disconnect()
+        await ctx.send("The bot is already connected to a voice channel")
+
+
+@client.command()
+async def disconnect(ctx):
+    vc = ctx.voice_client
+    if vc:
+        await vc.disconnect()
     else:
         await ctx.send("The bot is not connected to a voice channel.")
 
-@bot.command(name='play_song', help='To play song')
-async def play(ctx,url):
-    try :
-        server = ctx.message.guild
-        voice_channel = server.voice_client
-        async with ctx.typing():
-            filename = await YTDLSource.from_url(url, loop=bot.loop)
-            voice_channel.play(discord.FFmpegPCMAudio(executable="ffmpeg.exe", source=filename))
-        await ctx.send('**Now playing:** {}'.format(filename))
-    except:
+
+@client.command()
+async def play(ctx, *, search: wavelink.YouTubeTrack):
+    vc = ctx.voice_client
+    if not vc:
+        custom_player = CustomPlayer()
+        vc: CustomPlayer = await ctx.author.voice.channel.connect(cls=custom_player)
+
+    if vc.is_playing():
+
+        vc.queue.put(item=search)
+
+        await ctx.send(embed=discord.Embed(
+            title=search.title,
+            url=search.uri,
+            author=ctx.author,
+            description=f"Queued {search.title} in {vc.channel}"
+        ))
+    else:
+        await vc.play(search)
+
+        await ctx.send(embed=discord.Embed(
+            title=vc.source.title,
+            url=vc.source.uri,
+            author=ctx.author,
+            description=f"Playing {vc.source.title} in {vc.channel}"
+        ))
+
+
+@client.command()
+async def skip(ctx):
+    vc = ctx.voice_client
+    if vc:
+        if not vc.is_playing():
+            return await ctx.send("Nothing is playing.")
+        if vc.queue.is_empty:
+            return await vc.stop()
+
+        await vc.seek(vc.track.length * 1000)
+        if vc.is_paused():
+            await vc.resume()
+    else:
         await ctx.send("The bot is not connected to a voice channel.")
-@bot.command(name='pause', help='This command pauses the song')
+
+
+@client.command()
 async def pause(ctx):
-    voice_client = ctx.message.guild.voice_client
-    if voice_client.is_playing():
-        await voice_client.pause()
+    vc = ctx.voice_client
+    if vc:
+        if vc.is_playing() and not vc.is_paused():
+            await vc.pause()
+        else:
+            await ctx.send("Nothing is playing.")
     else:
-        await ctx.send("The bot is not playing anything at the moment.")
-    
-@bot.command(name='resume', help='Resumes the song')
+        await ctx.send("The bot is not connected to a voice channel")
+
+
+@client.command()
 async def resume(ctx):
-    voice_client = ctx.message.guild.voice_client
-    if voice_client.is_paused():
-        await voice_client.resume()
+    vc = ctx.voice_client
+    if vc:
+        if vc.is_paused():
+            await vc.resume()
+        else:
+            await ctx.send("Nothing is paused.")
     else:
-        await ctx.send("The bot was not playing anything before this. Use play_song command")
-@bot.command(name='stop', help='Stops the song')
-async def stop(ctx):
-    voice_client = ctx.message.guild.voice_client
-    if voice_client.is_playing():
-        await voice_client.stop()
+        await ctx.send("The bot is not connected to a voice channel")
+
+
+# error handling
+
+@play.error
+async def play_error(ctx, error):
+    if isinstance(error, commands.BadArgument):
+        await ctx.send("Could not find a track.")
     else:
-        await ctx.send("The bot is not playing anything at the moment.")
+        await ctx.send("Please join a voice channel.")
 
 #Uses bot token from .env file in order to run bot
-bot.run(os.getenv('DiscordToken'))
+client.run(os.getenv('DiscordToken'))
